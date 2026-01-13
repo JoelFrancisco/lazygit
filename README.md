@@ -69,6 +69,7 @@ If you're a mere mortal like me and you're tired of hearing how powerful git is 
 
 ## Table of contents
 
+- [Fork Changes: AI Commit Message Generation](#fork-changes-ai-commit-message-generation)
 - [Sponsors](#sponsors)
 - [Elevator Pitch](#elevator-pitch)
 - [Table of contents](#table-of-contents)
@@ -129,6 +130,53 @@ If you're a mere mortal like me and you're tired of hearing how powerful git is 
 - [Alternatives](#alternatives)
 
 Lazygit is not my fulltime job but it is a hefty part time job so if you want to support the project please consider [sponsoring me](https://github.com/sponsors/jesseduffield)
+
+---
+
+## Fork Changes: AI Commit Message Generation
+
+This fork adds native **AI-powered commit message generation** using [OpenRouter](https://openrouter.ai/), removing the need for external tools like `aicommits`.
+
+### Setup
+
+1. Get an API key from [OpenRouter](https://openrouter.ai/)
+2. Set the environment variable:
+   ```sh
+   export OPENROUTER_API_KEY=your-api-key-here
+   ```
+
+### Usage
+
+1. Stage your changes in lazygit
+2. Press `Ctrl+g` to generate an AI commit message
+3. Review/edit the generated message and commit
+
+### Configuration
+
+Add to your `~/.config/lazygit/config.yml`:
+
+```yaml
+git:
+  commit:
+    # OpenRouter model to use (default: google/gemini-3-flash-preview)
+    aiModel: "google/gemini-3-flash-preview"
+    # API endpoint (default: OpenRouter)
+    aiBaseURL: "https://openrouter.ai/api/v1/chat/completions"
+    # Language for commit messages (default: en)
+    aiCommitLanguage: "en"
+```
+
+### Supported Models
+
+Any model available on OpenRouter can be used, for example:
+- `google/gemini-3-flash-preview` (default)
+- `anthropic/claude-3-haiku`
+- `openai/gpt-4o-mini`
+- `meta-llama/llama-3-8b-instruct`
+
+See [OpenRouter Models](https://openrouter.ai/models) for the full list.
+
+---
 
 ## Features
 
