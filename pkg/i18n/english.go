@@ -40,6 +40,12 @@ type TranslationSet struct {
 	SureToAmend                           string
 	NoCommitToAmend                       string
 	CommitChangesWithEditor               string
+	GenerateAICommitMessage               string
+	GenerateAICommitMessageTooltip        string
+	GeneratingAICommitMessage             string
+	AICommitNoAPIKey                      string
+	AICommitNoStagedChanges               string
+	AICommitsFailed                       string
 	FindBaseCommitForFixup                string
 	FindBaseCommitForFixupTooltip         string
 	NoBaseCommitsFound                    string
@@ -1006,6 +1012,7 @@ type Actions struct {
 	ExcludeFile                      string
 	ExcludeGitIgnoreErr              string
 	Commit                           string
+	GenerateAICommitMessage          string
 	Push                             string
 	Pull                             string
 	OpenFile                         string
@@ -1135,6 +1142,12 @@ func EnglishTranslationSet() *TranslationSet {
 		SureToAmend:                          "Are you sure you want to amend last commit? Afterwards, you can change the commit message from the commits panel.",
 		NoCommitToAmend:                      "There's no commit to amend.",
 		CommitChangesWithEditor:              "Commit changes using git editor",
+		GenerateAICommitMessage:              "Generate AI commit message",
+		GenerateAICommitMessageTooltip:       "Generate a commit message using AI (requires OPENROUTER_API_KEY env var). The generated message will be shown in the commit panel for review before committing.",
+		GeneratingAICommitMessage:            "Generating AI commit message...",
+		AICommitNoAPIKey:                     "OPENROUTER_API_KEY environment variable is not set",
+		AICommitNoStagedChanges:              "No staged changes to generate commit message for",
+		AICommitsFailed:                      "Failed to generate AI commit message",
 		FindBaseCommitForFixup:               "Find base commit for fixup",
 		FindBaseCommitForFixupTooltip:        "Find the commit that your current changes are building upon, for the sake of amending/fixing up the commit. This spares you from having to look through your branch's commits one-by-one to see which commit should be amended/fixed up. See docs: <https://github.com/jesseduffield/lazygit/tree/master/docs/Fixup_Commits.md>",
 		NoBaseCommitsFound:                   "No base commits found",
@@ -2067,6 +2080,7 @@ func EnglishTranslationSet() *TranslationSet {
 			ExcludeFile:                      "Exclude file",
 			ExcludeGitIgnoreErr:              "Cannot exclude .gitignore",
 			Commit:                           "Commit",
+			GenerateAICommitMessage:          "Generate AI commit message",
 			Push:                             "Push",
 			Pull:                             "Pull",
 			OpenFile:                         "Open file",

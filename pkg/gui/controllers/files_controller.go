@@ -1,8 +1,13 @@
 package controllers
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -87,6 +92,12 @@ func (self *FilesController) GetKeybindings(opts types.KeybindingsOpts) []*types
 			Handler:     self.c.Helpers().FixupHelper.HandleFindBaseCommitForFixupPress,
 			Description: self.c.Tr.FindBaseCommitForFixup,
 			Tooltip:     self.c.Tr.FindBaseCommitForFixupTooltip,
+		},
+		{
+			Key:         opts.GetKey(opts.Config.Files.GenerateAICommitMessage),
+			Handler:     self.generateAICommitMessage,
+			Description: self.c.Tr.GenerateAICommitMessage,
+			Tooltip:     self.c.Tr.GenerateAICommitMessageTooltip,
 		},
 		{
 			Key:               opts.GetKey(opts.Config.Universal.Edit),
@@ -820,6 +831,140 @@ func (self *FilesController) handleAmendCommitPress() error {
 			},
 		},
 	)
+}
+
+func (self *FilesController) generateAICommitMessage() error {
+	return self.c.WithWaitingStatus(self.c.Tr.GeneratingAICommitMessage, func(gocui.Task) error {
+		// Get API key from environment
+		apiKey := os.Getenv("OPENROUTER_API_KEY")
+		if apiKey == "" {
+			self.c.OnUIThread(func() error {
+				self.c.ErrorToast(self.c.Tr.AICommitNoAPIKey)
+				return nil
+			})
+			return nil
+		}
+
+		// Get staged diff
+		diff, err := self.c.Git().Diff.GetDiff(true)
+		if err != nil {
+			self.c.OnUIThread(func() error {
+				self.c.ErrorToast(self.c.Tr.AICommitsFailed + ": " + err.Error())
+				return nil
+			})
+			return nil
+		}
+
+		if strings.TrimSpace(diff) == "" {
+			self.c.OnUIThread(func() error {
+				self.c.ErrorToast(self.c.Tr.AICommitNoStagedChanges)
+				return nil
+			})
+			return nil
+		}
+
+		// Get config
+		config := self.c.UserConfig().Git.Commit
+		locale := config.AICommitLanguage
+		model := config.AIModel
+		baseURL := config.AIBaseURL
+
+		// Build prompt
+		prompt := buildCommitPrompt(diff, locale)
+
+		// Call OpenRouter API
+		commitMessage, err := callOpenRouterAPI(apiKey, model, baseURL, prompt)
+		if err != nil {
+			self.c.OnUIThread(func() error {
+				self.c.ErrorToast(self.c.Tr.AICommitsFailed + ": " + err.Error())
+				return nil
+			})
+			return nil
+		}
+
+		commitMessage = strings.TrimSpace(commitMessage)
+		if commitMessage == "" {
+			self.c.OnUIThread(func() error {
+				self.c.ErrorToast(self.c.Tr.AICommitsFailed + ": empty response")
+				return nil
+			})
+			return nil
+		}
+
+		self.c.OnUIThread(func() error {
+			self.c.LogAction(self.c.Tr.Actions.GenerateAICommitMessage)
+			return self.c.Helpers().WorkingTree.HandleCommitPressWithMessage(commitMessage, false)
+		})
+
+		return nil
+	})
+}
+
+func buildCommitPrompt(diff, locale string) string {
+	return fmt.Sprintf(`Generate a concise git commit message for the following changes.
+Language: %s
+Follow conventional commits format (type: description).
+Types: feat, fix, docs, style, refactor, test, chore
+Be specific but brief. Only output the commit message, nothing else.
+
+Diff:
+%s`, locale, diff)
+}
+
+func callOpenRouterAPI(apiKey, model, baseURL, prompt string) (string, error) {
+	requestBody := map[string]interface{}{
+		"model": model,
+		"messages": []map[string]string{
+			{"role": "user", "content": prompt},
+		},
+	}
+
+	jsonBody, err := json.Marshal(requestBody)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", baseURL, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to make request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	var response struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+
+	if err := json.Unmarshal(body, &response); err != nil {
+		return "", fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	if len(response.Choices) == 0 {
+		return "", fmt.Errorf("no choices in response")
+	}
+
+	return response.Choices[0].Message.Content, nil
 }
 
 func (self *FilesController) isResolvingConflicts() bool {

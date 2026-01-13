@@ -355,6 +355,12 @@ type CommitConfig struct {
 	AutoWrapCommitMessage bool `yaml:"autoWrapCommitMessage"`
 	// If autoWrapCommitMessage is true, the width to wrap to
 	AutoWrapWidth int `yaml:"autoWrapWidth"`
+	// Language/locale for AI-generated commit messages (e.g. "en", "pt-br")
+	AICommitLanguage string `yaml:"aiCommitLanguage"`
+	// OpenRouter model ID for AI commit message generation (e.g. "google/gemini-3-flash-preview", "anthropic/claude-3-haiku")
+	AIModel string `yaml:"aiModel"`
+	// Base URL for the AI API endpoint (OpenAI-compatible). Defaults to OpenRouter.
+	AIBaseURL string `yaml:"aiBaseURL"`
 }
 
 type MergingConfig struct {
@@ -515,9 +521,10 @@ type KeybindingFilesConfig struct {
 	ToggleTreeView           string `yaml:"toggleTreeView"`
 	OpenMergeOptions         string `yaml:"openMergeOptions"`
 	OpenStatusFilter         string `yaml:"openStatusFilter"`
-	CopyFileInfoToClipboard  string `yaml:"copyFileInfoToClipboard"`
-	CollapseAll              string `yaml:"collapseAll"`
-	ExpandAll                string `yaml:"expandAll"`
+	CopyFileInfoToClipboard   string `yaml:"copyFileInfoToClipboard"`
+	CollapseAll               string `yaml:"collapseAll"`
+	ExpandAll                 string `yaml:"expandAll"`
+	GenerateAICommitMessage   string `yaml:"generateAICommitMessage"`
 }
 
 type KeybindingBranchesConfig struct {
@@ -826,6 +833,9 @@ func GetDefaultConfig() *UserConfig {
 				SignOff:               false,
 				AutoWrapCommitMessage: true,
 				AutoWrapWidth:         72,
+				AICommitLanguage:      "en",
+				AIModel:               "google/gemini-3-flash-preview",
+				AIBaseURL:             "https://openrouter.ai/api/v1/chat/completions",
 			},
 			Merging: MergingConfig{
 				ManualCommit:       false,
@@ -975,9 +985,10 @@ func GetDefaultConfig() *UserConfig {
 				OpenMergeOptions:         "M",
 				OpenStatusFilter:         "<c-b>",
 				ConfirmDiscard:           "x",
-				CopyFileInfoToClipboard:  "y",
-				CollapseAll:              "-",
-				ExpandAll:                "=",
+				CopyFileInfoToClipboard:   "y",
+				CollapseAll:               "-",
+				ExpandAll:                 "=",
+				GenerateAICommitMessage:   "<c-g>",
 			},
 			Branches: KeybindingBranchesConfig{
 				CopyPullRequestURL:     "<c-y>",
